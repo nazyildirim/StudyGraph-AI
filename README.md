@@ -28,9 +28,29 @@
 
 ## Sistem Mimarisi
 
-Proje; kullanıcı arayüzü, API servisleri, öğrenme grafiği algoritmaları, veritabanı ve yapay zekâ bileşenlerinden oluşacak şekilde tasarlanmaktadır.
+StudyGraph AI projesinde **Modüler Katmanlı Mimari (Modular Layered Architecture)** kullanılması planlanmaktadır. Mimari tasarımda **Clean Architecture** yaklaşımının temel prensiplerinden yararlanılmaktadır.
 
-Yazılım geliştirme sürecinde SOLID ilkeleri, modülerlik ve sorumlulukların ayrılması esas alınacaktır.
+Sistem dört temel katman üzerinden tasarlanmaktadır:
+
+1. **Presentation Layer (Sunum Katmanı):** React ile geliştirilecek öğrenci ve öğretim elemanı arayüzlerini içerir.
+2. **Application Layer (Uygulama Katmanı):** FastAPI üzerinden API isteklerini, uygulama servislerini ve iş akışlarını yönetir.
+3. **Domain Layer (Alan Katmanı):** Öğrenme grafiği, ön koşul ilişkileri, yeterlilik hesaplamaları ve kişiselleştirilmiş öneri algoritmalarını içerir.
+4. **Infrastructure Layer (Altyapı Katmanı):** PostgreSQL veritabanı, veri erişim işlemleri ve RAG/LLM entegrasyonlarını kapsar.
+
+Backend tarafında **Modular Monolith (Modüler Monolit)** yaklaşımı tercih edilmektedir. Bu sayede sistem tek bir uygulama olarak geliştirilebilirken bileşenlerin sorumlulukları birbirinden ayrılabilecektir.
+
+### Mimari Seçimin Gerekçeleri
+
+- **Sorumlulukların Ayrılması:** Her katmanın belirli görevleri üstlenmesi.
+- **Bakım Kolaylığı:** Sistemin farklı bölümlerinin birbirinden bağımsız şekilde güncellenebilmesi.
+- **Test Edilebilirlik:** Öğrenme grafiği ve öneri algoritmalarının ayrı olarak test edilebilmesi.
+- **Düşük Bağımlılık:** Katmanlar arasındaki doğrudan bağımlılıkların azaltılması.
+- **Ekip Çalışması:** Üç ekip üyesinin farklı modüller üzerinde çalışabilmesi.
+- **Genişletilebilirlik:** Yeni algoritmaların ve yapay zekâ servislerinin sisteme eklenebilmesi.
+
+Tasarım sürecinde **SOLID ilkeleri**, **Repository Pattern**, **Strategy Pattern** ve **Dependency Injection** yaklaşımlarından yararlanılması hedeflenmektedir.
+
+Bu mimari henüz planlama ve geliştirme aşamasındadır; uygulama ilerledikçe teknik ayrıntılar güncellenecektir.
 
 ## Ekip ve Görev Dağılımı
 
@@ -63,13 +83,15 @@ Geliştirmeler ayrı branch'lerde yürütülecek; değişiklikler Pull Request v
 
 ## Geliştirme Durumu
 
-**Durum: Başlangıç / Planlama**
+**Durum: Planlama ve İlk Tasarım**
 
 - [x] GitHub repository oluşturuldu.
 - [x] Görevler GitHub Issues üzerinde tanımlandı.
-- [x] GitHub Projects panosu hazırlandı.
+- [x] GitHub Projects (Kanban) panosu hazırlandı.
 - [x] Ekip için çalışma branch'leri oluşturuldu.
-- [ ] Sistem mimarisi ve UML diyagramları tamamlanacak.
+- [x] Sistem mimarisi dokümanı hazırlandı ve incelemeye sunuldu.
+- [x] UML Component, Class ve Use Case diyagramları hazırlandı ve incelemeye sunuldu.
+- [ ] Mimari ve UML dokümanlarının Pull Request incelemeleri tamamlanacak.
 - [ ] Backend ve veritabanı geliştirilecek.
 - [ ] Öğrenme grafiği ve öneri algoritmaları geliştirilecek.
 - [ ] Frontend arayüzleri geliştirilecek.
