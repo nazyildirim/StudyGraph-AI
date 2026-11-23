@@ -429,7 +429,15 @@ Uygulama servisleri, veritabanı sorgularını `users.role` alanına göre filtr
 
 ---
 
-## 6. ER Diyagramı
+## 6. ER Diyagramları
+
+> **Not:** GitHub Mermaid renderleyicisi çok büyük `erDiagram` bloklarını render edemeyebilir (SVG zaman aşımı / boyut sınırı). Bu nedenle 17 tablo 4 mantıksal modüle bölünmüştür. Her modül bağımsız olarak render edilebilir. Tüm tablo tanımları, alanlar ve ilişkiler korunmaktadır; veritabanı tasarımı değiştirilmemiştir.
+
+---
+
+### 6.1. Modül 1 — Kullanıcılar ve Dersler
+
+`users`, `courses`, `course_enrollments` tablolarını ve bunların aralarındaki ilişkileri gösterir. Issue #6 (Authentication) kapsamını temsil eder.
 
 ```mermaid
 erDiagram
@@ -464,6 +472,25 @@ erDiagram
         varchar status
     }
 
+    users ||--o{ courses : "instructor_id"
+    users ||--o{ course_enrollments : "student_id"
+    courses ||--o{ course_enrollments : "course_id"
+```
+
+---
+
+### 6.2. Modül 2 — Öğrenme Grafı
+
+`learning_outcomes` ve `prerequisites` tablolarını ve bunların `courses` ile ilişkisini gösterir. Graph Engine modülünün veri temelini oluşturur.
+
+```mermaid
+erDiagram
+    courses {
+        int id PK
+        varchar code UK
+        varchar title
+    }
+
     learning_outcomes {
         int id PK
         int course_id FK
@@ -482,6 +509,41 @@ erDiagram
         timestamptz created_at
     }
 
+    mastery_records {
+        int id PK
+        int student_id FK
+        int learning_outcome_id FK
+        float mastery_score
+        int total_attempts
+        timestamptz last_assessed_at
+        timestamptz updated_at
+    }
+
+    study_recommendations {
+        int id PK
+        int student_id FK
+        int learning_outcome_id FK
+        int priority_order
+        text reason
+        varchar status
+        timestamptz created_at
+    }
+
+    courses ||--o{ learning_outcomes : "course_id"
+    learning_outcomes ||--o{ prerequisites : "prerequisite_outcome_id"
+    learning_outcomes ||--o{ prerequisites : "dependent_outcome_id"
+    learning_outcomes ||--o{ mastery_records : "learning_outcome_id"
+    learning_outcomes ||--o{ study_recommendations : "learning_outcome_id"
+```
+
+---
+
+### 6.3. Modül 3 — Soru Bankası ve Sınavlar
+
+`questions`, `question_options`, `assessments`, `assessment_questions`, `student_assessments` ve `student_responses` tablolarını gösterir. Issue #7 (Question Bank & Exams) kapsamını temsil eder.
+
+```mermaid
+erDiagram
     questions {
         int id PK
         int learning_outcome_id FK
@@ -506,7 +568,6 @@ erDiagram
         int id PK
         int course_id FK
         varchar title
-        text description
         varchar assessment_type
         int time_limit_minutes
         int created_by FK
@@ -540,24 +601,27 @@ erDiagram
         timestamptz answered_at
     }
 
-    mastery_records {
-        int id PK
-        int student_id FK
-        int learning_outcome_id FK
-        float mastery_score
-        int total_attempts
-        timestamptz last_assessed_at
-        timestamptz updated_at
-    }
+    questions ||--o{ question_options : "question_id"
+    questions ||--o{ assessment_questions : "question_id"
+    assessments ||--o{ assessment_questions : "assessment_id"
+    assessments ||--o{ student_assessments : "assessment_id"
+    student_assessments ||--o{ student_responses : "student_assessment_id"
+    questions ||--o{ student_responses : "question_id"
+    question_options ||--o{ student_responses : "selected_option_id"
+```
 
-    study_recommendations {
+---
+
+### 6.4. Modül 4 — Ders Materyalleri ve RAG Asistanı
+
+`course_materials`, `material_chunks`, `rag_queries` ve `rag_query_citations` tablolarını gösterir. Issue #8 (RAG Assistant) kapsamını temsil eder.
+
+```mermaid
+erDiagram
+    courses {
         int id PK
-        int student_id FK
-        int learning_outcome_id FK
-        int priority_order
-        text reason
-        varchar status
-        timestamptz created_at
+        varchar code UK
+        varchar title
     }
 
     course_materials {
@@ -599,33 +663,9 @@ erDiagram
         float relevance_score
     }
 
-    users ||--o{ courses : "instructor_id"
-    users ||--o{ course_enrollments : "student_id"
-    courses ||--o{ course_enrollments : "course_id"
-    courses ||--o{ learning_outcomes : "course_id"
-    learning_outcomes ||--o{ prerequisites : "prerequisite_outcome_id"
-    learning_outcomes ||--o{ prerequisites : "dependent_outcome_id"
-    learning_outcomes ||--o{ questions : "learning_outcome_id"
-    questions ||--o{ question_options : "question_id"
-    courses ||--o{ assessments : "course_id"
-    users ||--o{ assessments : "created_by"
-    assessments ||--o{ assessment_questions : "assessment_id"
-    questions ||--o{ assessment_questions : "question_id"
-    users ||--o{ student_assessments : "student_id"
-    assessments ||--o{ student_assessments : "assessment_id"
-    student_assessments ||--o{ student_responses : "student_assessment_id"
-    questions ||--o{ student_responses : "question_id"
-    question_options ||--o{ student_responses : "selected_option_id"
-    users ||--o{ mastery_records : "student_id"
-    learning_outcomes ||--o{ mastery_records : "learning_outcome_id"
-    users ||--o{ study_recommendations : "student_id"
-    learning_outcomes ||--o{ study_recommendations : "learning_outcome_id"
     courses ||--o{ course_materials : "course_id"
-    users ||--o{ course_materials : "uploaded_by"
-    course_materials ||--o{ material_chunks : "material_id"
-    learning_outcomes ||--o{ material_chunks : "learning_outcome_id"
-    users ||--o{ rag_queries : "student_id"
     courses ||--o{ rag_queries : "course_id"
+    course_materials ||--o{ material_chunks : "material_id"
     rag_queries ||--o{ rag_query_citations : "query_id"
     material_chunks ||--o{ rag_query_citations : "chunk_id"
 ```
