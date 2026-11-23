@@ -140,3 +140,40 @@ export function pickQuestions(pool, difficulty, count, random = Math.random) {
   }
   return picked
 }
+
+// ------------------------------------------------------------
+// BACKEND ANALİZİYLE UYUM
+// Ranya'nın RecommendationEngine kuralının birebir aynısı:
+//   completed: puan >= eşik
+//   blocked:   doğrudan ön koşullardan biri tamamlanmamış
+//   study:     henüz ölçülmemiş, ön koşulları tamam
+//   review:    ölçülmüş ama eşik altında, ön koşulları tamam
+// Sadece "kolay sınav sınırı" uygulandığında durumları yeniden
+// hesaplamak için kullanılır (backend zorluk bilgisini henüz almıyor).
+// ------------------------------------------------------------
+export function statusesFromScores(outcomes, scores, threshold, learningOrder) {
+  const byId = Object.fromEntries(outcomes.map((o) => [o.id, o]))
+  const mastered = new Set(Object.keys(scores).filter((id) => scores[id] >= threshold))
+  const result = {}
+  for (const id of learningOrder) {
+    if (mastered.has(id)) {
+      result[id] = { status: 'completed', missing: [] }
+      continue
+    }
+    const missing = (byId[id]?.prerequisites || []).filter((p) => !mastered.has(p))
+    const status = missing.length ? 'blocked' : scores[id] === undefined ? 'study' : 'review'
+    result[id] = { status, missing }
+  }
+  return result
+}
+
+// Backend durumlarından sıradaki önerilen konuyu çıkarır
+export function recommendationFromStatuses(outcomes, statuses, learningOrder) {
+  const byId = Object.fromEntries(outcomes.map((o) => [o.id, o]))
+  const nextId = learningOrder.find((id) => ['review', 'study'].includes(statuses[id]?.status))
+  if (!nextId) return null
+  const blockedTopics = learningOrder
+    .filter((id) => statuses[id]?.status === 'blocked' && statuses[id].missing.includes(nextId))
+    .map((id) => byId[id].name)
+  return { outcome: byId[nextId], blockedTopics }
+}

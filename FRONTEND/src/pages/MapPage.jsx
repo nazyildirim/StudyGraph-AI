@@ -32,7 +32,19 @@ export default function MapPage({ course, go, onStudy }) {
 
   return (
     <div>
-      <h1>{course.name} · Öğrenme Haritam</h1>
+      <div className="panel-head">
+        <h1>{course.name} · Öğrenme Haritam</h1>
+        <span
+          className={`tag source ${map.analysisSource === 'backend' ? 'live' : ''}`}
+          title={
+            map.analysisSource === 'backend'
+              ? 'Puanlar ve öneriler StudyGraph öğrenme analizi servisinden geliyor.'
+              : 'Backend kapalı; puanlar ve öneriler tarayıcıda hesaplandı.'
+          }
+        >
+          {map.analysisSource === 'backend' ? 'Analiz: backend' : 'Analiz: yerel (backend kapalı)'}
+        </span>
+      </div>
 
       {rec ? (
         <div className="card recommendation">

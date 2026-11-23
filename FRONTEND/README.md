@@ -14,7 +14,11 @@ Giriş ekranında **Öğrenci**, **Akademisyen** ya da **Yönetici** seçip herh
 
 Windows PowerShell'de `npm` komutu "running scripts is disabled" hatası verirse `npm.cmd run dev` yaz.
 
-Testler: `npm.cmd test` (12 birim testi).
+Testler: `npm.cmd test` (14 birim testi). Backend açıkken: `npm.cmd run test:entegrasyon`.
+
+## Backend entegrasyonu
+
+Harita puanları, öğrenme sırası ve öneriler **Ranya'nın öğrenme analizi servisinden** (`POST /api/v1/learning-analyses`) gelir. Backend kapalıysa uygulama yerel hesapla çalışmaya devam eder; harita ekranında kaynak yazar. Ayrıntılar ve çalıştırma: `docs/ENTEGRASYON.md`.
 
 ## Uçtan uca akış (sunumdaki demo)
 
@@ -37,6 +41,7 @@ Yönetici girişi: kullanıcı ekleme, rol değiştirme, hesabı pasif/aktif yap
 ## Belgeler
 
 - `docs/ARAYUZ_TASARIMI.md`: ekran akışı, wireframe'ler, bileşen tasarımı ve kararları, Use Case ve Sequence diyagramları
+- `docs/ENTEGRASYON.md`: backend bağlantısı, çalıştırma, veri eşleştirme, test sonuçları, ekip kararları
 - `docs/ARAYUZ_TESTLERI.md`: birim testleri, arayüz senaryo testleri, kullanılabilirlik testi planı
 - `docs/ekran-goruntuleri/`: sunum için ekran görüntüleri
 
@@ -53,19 +58,19 @@ Yönetici girişi: kullanıcı ekleme, rol değiştirme, hesabı pasif/aktif yap
 | `src/components/Header.jsx` | Role göre değişen üst menü |
 | `src/pages/AdminPage.jsx` | Yönetici: kullanıcı ve rol yönetimi |
 | `src/api/learningLogic.test.js` | Birim testleri |
+| `src/api/entegrasyon.test.js` | Backend entegrasyon testi |
 | `src/components/instructor/*.jsx` | Akademisyen panelinin sekmeleri (ders, kazanım, soru, not yönetimi, genel bakış) |
 | `src/pages/*.jsx` | Ekranlar: Login, Courses, Exam, Map, Study, Retest, Instructor |
 
-## Backend'e bağlama
+## Diğer servisleri bağlama
 
-1. `src/api/api.js` içinde `USE_MOCK = false` yap.
-2. `BASE_URL`'i backend adresine ayarla (varsayılan `http://localhost:8000`).
-3. Dosyadaki yolları (`/auth/login`, `/courses/{id}/exams/initial` vb.) backend'deki gerçek uç noktalarla eşleştir.
-   Ekran dosyalarında değişiklik gerekmez.
+Giriş, ders, sınav, soru bankası, not, asistan ve rapor servisleri backend'de yazıldıkça
+`src/api/api.js` içindeki ilgili fonksiyonlar gerçek yollarla eşleştirilir (`USE_MOCK`).
+Ekran dosyalarında değişiklik gerekmez.
 
 ## Henüz yapılmayanlar (dürüst durum)
 
-- Backend'e gerçek bağlantı denenmedi; uç nokta yolları tahmini, backend ile birlikte netleştirilmeli.
+- Backend'de şu an sadece öğrenme analizi servisi var; diğer servisler yazılınca bağlanacak (`docs/ENTEGRASYON.md`, bölüm 5).
 - Yapay zekâ asistanı demo modunda ders notlarından kelime eşleşmesiyle parça getiriyor; gerçek LLM cevabı backend RAG servisi bağlanınca gelecek.
 - Ders notu demo modunda metin olarak yapıştırılıyor; PDF yükleme ve otomatik parçalama backend RAG servisiyle gelecek.
 - Sınıf raporu örnek veri (sadece Algoritma Analizi dersi için).

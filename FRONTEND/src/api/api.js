@@ -2,12 +2,15 @@
 // API KATMANI
 // Ekranlar veriyi SADECE bu dosyadaki fonksiyonlardan ister.
 //
-// USE_MOCK = true  → örnek verilerle çalışır (backend gerekmez)
-// USE_MOCK = false → istekler gerçek FastAPI backend'ine gider
+// GERÇEK BACKEND BAĞLANTISI (şu an çalışan kısım):
+//   Öğrenme analizi → Ranya'nın FastAPI servisi
+//   POST /api/v1/learning-analyses  (docs/API_INTEGRATION_CONTRACT.md)
+//   Harita puanları, öğrenme sırası ve öneriler bu servisten gelir.
+//   Backend kapalıysa uygulama otomatik olarak yerel hesapla devam eder.
 //
-// Backend hazır olunca: USE_MOCK'u false yap, BASE_URL'i ve
-// aşağıdaki yolları (/auth/login vb.) backend'deki gerçek yollarla
-// eşleştir. Ekranlarda hiçbir şeyi değiştirmen gerekmez.
+// ÖRNEK VERİ (USE_MOCK = true): Giriş, ders, sınav, soru bankası,
+//   notlar, asistan ve raporlar. Backend'de bu servisler henüz yok;
+//   yazıldıkça ilgili fonksiyonlar gerçek yollarla eşleştirilecek.
 // ------------------------------------------------------------
 
 import * as mock from './mockData.js'
@@ -19,12 +22,22 @@ import {
   hasCycle,
   retestScore,
   pickQuestions,
+  statusesFromScores,
+  recommendationFromStatuses,
 } from './learningLogic.js'
 
 export const USE_MOCK = true
 export const BASE_URL = 'http://localhost:8000'
 
 let sessionToken = null
+
+// Öğrenme analizi servisinin adresi. Geliştirmede Vite, /api isteklerini
+// http://localhost:8000 adresine yönlendirir (vite.config.js).
+const ENV = import.meta.env || {}
+let ANALYSIS_URL = ENV.VITE_ANALYSIS_URL || '/api/v1'
+export function setAnalysisUrl(url) {
+  ANALYSIS_URL = url // testlerde kullanılır
+}
 
 // ---------- Gerçek backend'e istek atan yardımcı ----------
 async function request(path, options = {}) {
@@ -48,7 +61,7 @@ async function request(path, options = {}) {
 //   store.progress[dersId]      → öğrencinin puanları ve geçmişi
 //   store.thresholds[dersId]    → başarı eşikleri
 // ============================================================
-const STORE_KEY = 'studygraph-demo-v4'
+const STORE_KEY = 'studygraph-demo-v5'
 
 function seedStore() {
   // Örnek sorulardaki tekrar sınavı sorularını tek listeye çevir
@@ -93,7 +106,9 @@ function saveStore() {
 const wait = (ms = 200) => new Promise((r) => setTimeout(r, ms))
 const content = (courseId) => store.content[courseId]
 const progress = (courseId) => {
-  store.progress[courseId] = store.progress[courseId] || { scores: {}, history: [] }
+  // results: kazanım başına en son ölçümün soru sonuçları (backend'e gider)
+  // capped: son ölçümü "kolay sınav sınırına" takılan kazanımlar
+  store.progress[courseId] = store.progress[courseId] || { scores: {}, history: [], results: {}, capped: {} }
   return store.progress[courseId]
 }
 const thresholdsOf = (courseId) => store.thresholds[courseId] || defaultThresholds
@@ -330,30 +345,108 @@ export async function submitInitialExam(courseId, answers) {
   const scores = scoreByOutcome(questions, answers)
   const p = progress(courseId)
   p.scores = scores
+  p.results = {}
+  p.capped = {}
+  for (const q of questions) {
+    p.results[q.outcomeId] = p.results[q.outcomeId] || []
+    // Doğru/yanlış sınav sisteminde (şimdilik bu katmanda) belirlenir, tarayıcıdan gelmez
+    p.results[q.outcomeId].push({ question_id: q.id, outcome_id: q.outcomeId, is_correct: answers[q.id] === q.answer })
+  }
   p.history.push({ date: new Date().toISOString(), type: 'Başlangıç sınavı', scores: { ...scores } })
   saveStore()
   return { scores }
 }
 
 // ============================================================
-// 7) Öğrenme haritası ve öneri
+// 7) Öğrenme haritası ve öneri  →  RANYA'NIN BACKEND'İ
 // ============================================================
-export async function getLearningMap(courseId) {
-  if (!USE_MOCK) return request(`/courses/${courseId}/learning-map`)
-  await wait(100)
+
+// Backend'e gidecek isteği sözleşmedeki formatta hazırlar
+export function buildAnalysisRequest(courseId) {
+  const c = content(courseId)
   const p = progress(courseId)
+  const question_results = Object.values(p.results || {}).flat()
+  if (question_results.length === 0) return null
   return {
-    outcomes: content(courseId).outcomes,
-    scores: p.scores,
-    thresholds: thresholdsOf(courseId),
-    history: p.history,
+    course_id: String(courseId),
+    outcomes: c.outcomes.map((o) => ({ id: o.id, course_id: String(courseId), title: o.name })),
+    prerequisite_edges: c.outcomes.flatMap((o) =>
+      o.prerequisites.map((pre) => ({ outcome_id: o.id, prerequisite_id: pre })),
+    ),
+    question_results,
+    mastery_threshold: thresholdsOf(courseId).sufficient,
   }
 }
 
-export async function getRecommendation(courseId) {
-  if (!USE_MOCK) return request(`/courses/${courseId}/recommendation`)
+// Backend'den analiz ister. Ulaşılamazsa null döner (yerel hesaba geçilir).
+async function analyzeWithBackend(courseId) {
+  const body = buildAnalysisRequest(courseId)
+  if (!body) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 2500)
+  try {
+    const res = await fetch(`${ANALYSIS_URL}/learning-analyses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      console.warn('Öğrenme analizi servisi hata döndürdü:', res.status, await res.text())
+      return null
+    }
+    const data = await res.json()
+    const c = content(courseId)
+    const p = progress(courseId)
+    const threshold = thresholdsOf(courseId).sufficient
+    const scores = Object.fromEntries(data.scores.map((s) => [s.outcome_id, Math.round(s.score_percent)]))
+    let statuses = Object.fromEntries(
+      data.recommendations.map((r) => [r.outcome_id, { status: r.status, missing: [...r.missing_prerequisites] }]),
+    )
+    // Kolay sınav sınırı: backend zorluk bilgisini almadığı için burada uygulanır
+    let cappedAny = false
+    for (const id of Object.keys(p.capped || {})) {
+      if (p.capped[id] && scores[id] >= threshold) {
+        scores[id] = threshold - 1
+        cappedAny = true
+      }
+    }
+    if (cappedAny) statuses = statusesFromScores(c.outcomes, scores, threshold, data.learning_order)
+    return { scores, statuses, learningOrder: data.learning_order }
+  } catch {
+    return null // backend kapalı ya da yanıt vermedi
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function getLearningMap(courseId) {
+  const p = progress(courseId)
+  const base = { outcomes: content(courseId).outcomes, thresholds: thresholdsOf(courseId), history: p.history }
+  const analysis = await analyzeWithBackend(courseId)
+  if (analysis) {
+    return { ...base, scores: analysis.scores, statuses: analysis.statuses, analysisSource: 'backend' }
+  }
   await wait(100)
-  return recommendNext(content(courseId).outcomes, progress(courseId).scores, thresholdsOf(courseId))
+  return { ...base, scores: p.scores, analysisSource: 'local' }
+}
+
+export async function getRecommendation(courseId) {
+  const c = content(courseId)
+  const analysis = await analyzeWithBackend(courseId)
+  if (analysis) return recommendationFromStatuses(c.outcomes, analysis.statuses, analysis.learningOrder)
+  await wait(100)
+  return recommendNext(c.outcomes, progress(courseId).scores, thresholdsOf(courseId))
+}
+
+// Backend çalışıyor mu? (harita ekranındaki küçük gösterge için)
+export async function checkBackendHealth() {
+  try {
+    const res = await fetch(`${ANALYSIS_URL}/health`)
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 // ============================================================
@@ -399,6 +492,8 @@ export async function submitRetest(courseId, outcomeId, answers, difficulty = 'm
   const oldScore = p.scores[outcomeId] ?? 0
   const { score: newScore, raw, capped } = retestScore(correct, asked.length, difficulty, thresholdsOf(courseId))
   p.scores = { ...p.scores, [outcomeId]: newScore }
+  p.results = { ...p.results, [outcomeId]: asked.map((q) => ({ question_id: q.id, outcome_id: outcomeId, is_correct: answers[q.id] === q.answer })) }
+  p.capped = { ...p.capped, [outcomeId]: capped }
   p.history.push({
     date: new Date().toISOString(),
     type: 'Tekrar sınavı',

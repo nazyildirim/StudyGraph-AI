@@ -19,8 +19,12 @@ Ek kütüphane gerekmez, Node'un kendi test aracıyla çalışır.
 | Kolay sınavda tam başarı konuyu "yeterli" yapmaz | Geçti |
 | Orta ve zor sınavda puan sınırlanmaz | Geçti |
 | İstenen zorlukta ve sayıda soru seçilir, karışıkta dengeli dağılır, soru tekrar etmez | Geçti |
+| Backend durum kuralının kopyası (completed / review / study / blocked) | Geçti |
+| Backend durumlarından öneri ve engelli konular çıkarılır | Geçti |
 
-**Toplam: 12 test, 12 geçti** (24.11.2026).
+**Toplam: 14 test, 14 geçti** (24.11.2026).
+
+Entegrasyon testi (`npm.cmd run test:entegrasyon`): 11 kontrol, hepsi geçti. Ayrıntı: `docs/ENTEGRASYON.md`.
 
 ## 2. Arayüz senaryo testleri
 
@@ -65,5 +69,5 @@ Her görev için: başarılı mı (Evet/Hayır), yaklaşık süre, kullanıcın�
 
 ## 4. Bilinen sınırlar
 
-- Backend'e gerçek bağlantı henüz test edilmedi (sahte veri modu).
+- Öğrenme analizi backend'e bağlı ve test edildi; diğer servisler backend'de henüz yok.
 - Asistan cevapları demo modunda ders notu parçalarıdır; gerçek yapay zekâ cevabı RAG servisi bağlanınca gelecek.

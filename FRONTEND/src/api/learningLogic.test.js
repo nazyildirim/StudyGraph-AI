@@ -13,6 +13,8 @@ import {
   retestDecision,
   retestScore,
   pickQuestions,
+  statusesFromScores,
+  recommendationFromStatuses,
 } from './learningLogic.js'
 import { outcomes, initialExam, retestQuestions } from './mockData.js'
 
@@ -100,4 +102,23 @@ test('istenen zorlukta ve sayıda soru seçilir', () => {
   const mixed = pickQuestions(pool, 'mixed', 3)
   assert.deepEqual(mixed.map((q) => q.difficulty).sort(), ['easy', 'hard', 'medium'])
   assert.equal(new Set(pickQuestions(pool, 'mixed', 10).map((q) => q.id)).size, 10) // tekrar eden soru yok
+})
+
+test('backend durum kuralının kopyası: completed / review / study / blocked', () => {
+  const order = ['k1', 'k2', 'k3', 'k4', 'k5']
+  const st = statusesFromScores(outcomes, { k1: 100, k2: 100, k3: 33 }, 70, order)
+  assert.equal(st.k1.status, 'completed')
+  assert.equal(st.k3.status, 'review')
+  assert.equal(st.k4.status, 'blocked')
+  assert.deepEqual(st.k4.missing, ['k3'])
+  const st2 = statusesFromScores(outcomes, { k1: 100, k2: 100, k3: 100 }, 70, order)
+  assert.equal(st2.k4.status, 'study') // ön koşul tamam, henüz ölçülmedi
+})
+
+test('backend durumlarından öneri çıkarılır', () => {
+  const order = ['k1', 'k2', 'k3', 'k4', 'k5']
+  const st = statusesFromScores(outcomes, { k1: 100, k2: 100, k3: 33 }, 70, order)
+  const rec = recommendationFromStatuses(outcomes, st, order)
+  assert.equal(rec.outcome.id, 'k3')
+  assert.deepEqual(rec.blockedTopics, ['Zaman Karmaşıklığı', 'Bubble Sort']) // ikisinin de doğrudan ön koşulu k3
 })
