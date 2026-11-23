@@ -1,0 +1,31 @@
+/* Genel renkler (pastel tonlar) ve yazı tipi */
+:root {
+  --bg: #f7f5f1;
+  --card: #ffffff;
+  --text: #34343d;
+  --muted: #84828c;
+  --border: #e8e4dc;
+  --primary: #6d8db5;        /* yumuşak mavi: vurgu, çerçeve */
+  --primary-soft: #dce7f3;   /* buton ve seçili alan zemini */
+  --primary-ink: #2f4a6b;    /* pastel zemin üstündeki yazı */
+  --green: #4f8f67;
+  --green-line: #9fcdb0;
+  --green-bg: #e2f1e7;
+  --yellow: #9a7425;
+  --yellow-line: #e6cc8a;
+  --yellow-bg: #fbf1d9;
+  --red: #a85656;
+  --red-line: #e6abab;
+  --red-bg: #f9e3e1;
+  --gray-bg: #f0ede7;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.55;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.3rem; }
+h2 { font-size: 1.2rem; font-weight: 600; margin: 0.3rem 0; }
+h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.6rem; }
+button, input, select, textarea { font: inherit; }
