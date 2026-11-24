@@ -72,6 +72,12 @@ StudyGraph-AI/
 └── .gitignore
 ```
 
+## Dokümantasyon
+
+| Belge | Açıklama |
+| ----- | -------- |
+| [DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) | Veritabanı şeması, ER diyagramı ve tablo ilişkileri |
+
 ## GitHub Proje Yönetimi
 
 - [GitHub Repository](https://github.com/nazyildirim/StudyGraph-AI)
