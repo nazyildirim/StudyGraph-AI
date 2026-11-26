@@ -716,4 +716,13 @@ backend/
 
 ---
 
+## 9. Uygulama Notları (Issue #6)
+
+`users` tablosu, SQLAlchemy 2.0 ORM modeli (`backend/app/models/user.py`) ve ilk Alembic migration (`backend/alembic/versions/0001_create_users.py`) Issue #6 kapsamında uygulanmıştır. Bu belge ile uygulama arasındaki kapsam farkları ve tasarımdan sapmalar (ör. parola hashlemede `bcrypt` yerine `Argon2id` kullanımı, `email = lower(email)` kısıtı ve indeks/kısıt adları) aşağıdaki belgelerde ayrıntılı olarak kayıt altına alınmıştır:
+
+- [AUTHENTICATION.md — Kimlik Doğrulama, Yetkilendirme ve Tasarım Farkları (§13)](AUTHENTICATION.md#13-database_designmd-ile-uygulama-arasındaki-farklar)
+- [SECURITY_RISKS.md — Güvenlik Riskleri ve Sınırlamalar](SECURITY_RISKS.md)
+
+---
+
 *Bu belge Issue #2 kapsamında hazırlanmıştır. ORM modelleri ve migration dosyaları Issue #2'nin devamı olan backend geliştirme aşamalarında oluşturulacaktır.*
