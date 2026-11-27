@@ -62,6 +62,7 @@ Sıralı migration zinciri:
 2. `0002_create_courses_enrollments`
 3. `0003_create_rag_tables`
 4. `0004_add_chunk_embeddings`
+5. `0005_create_assessment_tables` *(Issue #7 — Soru Bankası, Sınavlar ve Başarı Kayıtları; bkz. [ASSESSMENT_ARCHITECTURE.md](../docs/ASSESSMENT_ARCHITECTURE.md) ve [ASSESSMENT_API_CONTRACT.md](../docs/ASSESSMENT_API_CONTRACT.md))*
 
 ### 3. Yerel Embedding Modeli (`intfloat/multilingual-e5-small`, MIT)
 

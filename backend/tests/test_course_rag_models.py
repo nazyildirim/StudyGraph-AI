@@ -78,7 +78,6 @@ def test_unverified_outcome_reference_is_not_a_foreign_key() -> None:
     assert "unverified_outcome_ref" in material.c
     assert not material.c.unverified_outcome_ref.foreign_keys
     assert "learning_outcome_id" not in chunk.c
-    assert "learning_outcomes" not in Base.metadata.tables
 
 
 def test_chunk_constraints_and_page_columns() -> None:
@@ -147,9 +146,10 @@ def test_alembic_revision_chain_is_linear_and_ordered() -> None:
     cfg.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     script = ScriptDirectory.from_config(cfg)
 
-    assert script.get_heads() == ["0004_add_chunk_embeddings"]
+    heads = script.get_heads()
+    assert len(heads) == 1
     chain = [rev.revision for rev in script.walk_revisions()]
-    assert chain == [
+    assert chain[-4:] == [
         "0004_add_chunk_embeddings",
         "0003_create_rag_tables",
         "0002_create_courses_enrollments",

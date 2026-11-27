@@ -81,6 +81,9 @@ StudyGraph-AI/
 | [RAG_ARCHITECTURE.md](docs/RAG_ARCHITECTURE.md) | RAG asistanı mimarisi, UML/Mermaid diyagramları, SOLID ve demo rehberi (Issue #8) |
 | [RAG_API_CONTRACT.md](docs/RAG_API_CONTRACT.md) | Materyal yükleme ve RAG asistanı API sözleşmesi (Issue #8) |
 | [ADR-0002](docs/adr/0002-rag-mimarisi-ve-saglayici-secimi.md) | RAG sağlayıcı ve mimari karar kaydı |
+| [ASSESSMENT_ARCHITECTURE.md](docs/ASSESSMENT_ARCHITECTURE.md) | Soru bankası, başlangıç/tekrar sınavları mimarisi, UML/Mermaid diyagramları ve SOLID (Issue #7) |
+| [ASSESSMENT_API_CONTRACT.md](docs/ASSESSMENT_API_CONTRACT.md) | Soru bankası, sınav, başarı haritası API sözleşmesi ve frontend geçiş rehberi (Issue #7) |
+| [ADR-0003](docs/adr/0003-soru-bankasi-ve-sinav-mimarisi.md) | Soru bankası ve sınav sistemi mimari karar kaydı |
 
 ## RAG Asistanı Kurulumu ve Çalıştırma (Issue #8)
 
