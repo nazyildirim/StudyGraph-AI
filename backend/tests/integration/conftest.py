@@ -94,9 +94,9 @@ def pg_session_factory(migrated_pg_engine: Engine) -> sessionmaker[Session]:
 def clean_users_table(migrated_pg_engine: Engine) -> Generator[None, None, None]:
     """Truncate the `users` table before and after each integration test."""
     with migrated_pg_engine.begin() as conn:
-        conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+        conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
     try:
         yield
     finally:
         with migrated_pg_engine.begin() as conn:
-            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))

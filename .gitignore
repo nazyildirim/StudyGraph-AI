@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local ML models (never commit large binary weights)
+/models/
+
+# Local uploaded course materials (never commit user uploads)
+/uploads/
