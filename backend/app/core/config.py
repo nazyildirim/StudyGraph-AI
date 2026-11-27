@@ -118,6 +118,11 @@ class Settings(BaseSettings):
     )
     rag_max_concurrent_model_ops: int = Field(default=2, ge=1, le=8)
 
+    # Question bank & assessment defaults (Issue #7)
+    exam_initial_question_count: int = Field(default=15, ge=1, le=100)
+    exam_retest_question_count: int = Field(default=5, ge=1, le=50)
+    exam_default_mastery_threshold: float = Field(default=70.0, ge=0.0, le=100.0)
+
     @field_validator("database_url", "jwt_secret_key", mode="before")
     @classmethod
     def _empty_string_to_none(cls, value: object) -> object:

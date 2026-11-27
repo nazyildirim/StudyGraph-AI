@@ -91,8 +91,6 @@ def test_migration_0004_preserves_existing_chunks_and_downgrades_cleanly(
             ).one()
             assert row == ("text", None, None, None)
 
-        command.check(cfg)
-
         # Downgrade to 0003 removes embedding columns cleanly.
         command.downgrade(cfg, "0003_create_rag_tables")
         with pg_engine.connect() as conn:
@@ -102,6 +100,7 @@ def test_migration_0004_preserves_existing_chunks_and_downgrades_cleanly(
         command.upgrade(cfg, "head")
         with pg_engine.begin() as conn:
             conn.execute(text(TRUNCATE_ALL_SQL))
+    command.check(cfg)
 
 
 def test_db_check_constraints_enforce_embedding_consistency_and_byte_length(
