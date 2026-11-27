@@ -18,7 +18,8 @@ from app.api.dependencies.assessment import (
 )
 from app.api.dependencies.auth import get_current_user
 from app.authorization.ownership import ResourceNotFoundError, RoleAuthorizationError
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
+from app.database import get_db
 from app.main import app
 from app.repositories.errors import (
     AttemptAlreadyFinalizedError,
@@ -127,34 +128,44 @@ def test_http_error_translation_covers_all_domain_errors_and_anti_enumeration() 
     assert internal_exc.detail == "Internal server error."
 
 
-def test_unauthenticated_requests_return_401_and_validation_errors_are_sanitized() -> None:
+def test_unauthenticated_requests_return_401_and_validation_errors_are_sanitized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _clear_overrides()
+    monkeypatch.setenv(
+        "JWT_SECRET_KEY", "test-only-synthetic-jwt-secret-key-at-least-32b"
+    )
+    get_settings.cache_clear()
+
+    def _dummy_db():
+        yield MagicMock()
+
+    app.dependency_overrides[get_db] = _dummy_db
     client = TestClient(app)
-
-    for method, url in (
-        ("GET", "/api/v1/courses/1/questions"),
-        ("POST", "/api/v1/courses/1/exams/initial"),
-        ("POST", "/api/v1/courses/1/exams/retest"),
-        ("GET", "/api/v1/courses/1/outcomes"),
-        ("GET", "/api/v1/courses/1/mastery"),
-        ("GET", "/api/v1/courses/1/recommendations"),
-    ):
-        resp = client.request(method, url)
-        assert resp.status_code == 401
-
-    # Invalid JWT returns 401
-    resp_bad_jwt = client.get(
-        "/api/v1/courses/1/questions",
-        headers={"Authorization": "Bearer not.a.valid.jwt"},
-    )
-    assert resp_bad_jwt.status_code == 401
-
-    # Sanitized 422: raw invalid input is NOT echoed back
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
-        id=2, role="instructor", is_active=True
-    )
-    app.dependency_overrides[get_question_bank_service] = lambda: MagicMock()
     try:
+        for method, url in (
+            ("GET", "/api/v1/courses/1/questions"),
+            ("POST", "/api/v1/courses/1/exams/initial"),
+            ("POST", "/api/v1/courses/1/exams/retest"),
+            ("GET", "/api/v1/courses/1/outcomes"),
+            ("GET", "/api/v1/courses/1/mastery"),
+            ("GET", "/api/v1/courses/1/recommendations"),
+        ):
+            resp = client.request(method, url)
+            assert resp.status_code == 401
+
+        # Invalid JWT returns 401
+        resp_bad_jwt = client.get(
+            "/api/v1/courses/1/questions",
+            headers={"Authorization": "Bearer not.a.valid.jwt"},
+        )
+        assert resp_bad_jwt.status_code == 401
+
+        # Sanitized 422: raw invalid input is NOT echoed back
+        app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+            id=2, role="instructor", is_active=True
+        )
+        app.dependency_overrides[get_question_bank_service] = lambda: MagicMock()
         resp_422 = client.post(
             "/api/v1/courses/1/questions",
             json={
@@ -168,6 +179,8 @@ def test_unauthenticated_requests_return_401_and_validation_errors_are_sanitized
         assert "999" not in resp_422.text
     finally:
         _clear_overrides()
+        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+        get_settings.cache_clear()
 
 
 def test_exam_endpoints_return_201_on_create_200_on_resume_and_hide_answers() -> None:
