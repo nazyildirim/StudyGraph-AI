@@ -44,6 +44,58 @@ class InvalidCitationError(Exception):
     """A citation does not point to a chunk of the query's own course."""
 
 
+class LearningOutcomeCodeAlreadyExistsError(Exception):
+    """A learning outcome with the same code already exists in the course."""
+
+
+class PrerequisiteAlreadyExistsError(Exception):
+    """The directed prerequisite edge already exists."""
+
+
+class CyclicPrerequisiteError(Exception):
+    """Adding the prerequisite edge would create a self-loop or cycle."""
+
+
+class CrossCourseReferenceError(Exception):
+    """A referenced outcome, question, or option belongs to another course."""
+
+
+class QuestionNotFoundError(Exception):
+    """The target question does not exist in the specified course."""
+
+
+class QuestionArchivedError(Exception):
+    """The target question is archived and cannot be modified or assigned."""
+
+
+class InvalidQuestionOptionsError(Exception):
+    """Question options violate count, uniqueness, or single-correct-answer rules."""
+
+
+class AssessmentNotFoundError(Exception):
+    """The target assessment does not exist in the specified course."""
+
+
+class AttemptNotFoundError(Exception):
+    """The target student assessment attempt does not exist for this student."""
+
+
+class AttemptAlreadyFinalizedError(Exception):
+    """The student assessment attempt is already completed or abandoned."""
+
+
+class InvalidResponseError(Exception):
+    """A student response references an unassigned question or mismatched option."""
+
+
+class DuplicateResponseError(Exception):
+    """A response for the same question already exists in this attempt."""
+
+
+class PaginationValidationError(Exception):
+    """Pagination parameters (`limit` or `offset`) are out of valid bounds."""
+
+
 def integrity_sqlstate(error: IntegrityError) -> str | None:
     """Return the PostgreSQL SQLSTATE of an IntegrityError, if available."""
     return getattr(getattr(error, "orig", None), "sqlstate", None)
