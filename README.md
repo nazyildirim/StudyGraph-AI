@@ -77,6 +77,37 @@ StudyGraph-AI/
 | Belge | Açıklama |
 | ----- | -------- |
 | [DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) | Veritabanı şeması, ER diyagramı ve tablo ilişkileri |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md) | Kimlik doğrulama, RBAC ve güvenlik mimarisi (Issue #6) |
+| [RAG_ARCHITECTURE.md](docs/RAG_ARCHITECTURE.md) | RAG asistanı mimarisi, UML/Mermaid diyagramları, SOLID ve demo rehberi (Issue #8) |
+| [RAG_API_CONTRACT.md](docs/RAG_API_CONTRACT.md) | Materyal yükleme ve RAG asistanı API sözleşmesi (Issue #8) |
+| [ADR-0002](docs/adr/0002-rag-mimarisi-ve-saglayici-secimi.md) | RAG sağlayıcı ve mimari karar kaydı |
+
+## RAG Asistanı Kurulumu ve Çalıştırma (Issue #8)
+
+> **Not:** RAG modülü sıfırdan model eğitmez; yerel `intfloat/multilingual-e5-small` (ONNX, MIT) ve yerel Ollama `qwen3:4b` (Apache-2.0) modellerini kullanır. Ayrıntılı komutlar ve test ortamı ayrımı için [backend/README_backend.md](backend/README_backend.md) ve [docs/RAG_ARCHITECTURE.md](docs/RAG_ARCHITECTURE.md) belgelerine bakın.
+
+1. Sanal ortam ve bağımlılıklar:
+   ```bash
+   python3 -m venv .venv && source .venv/bin/activate
+   pip install -r backend/requirements.txt
+   ```
+2. Ortam değişkenleri: `backend/.env.example` dosyasını `backend/.env` olarak kopyalayıp yerel geliştirme `DATABASE_URL` ve `JWT_SECRET_KEY` değerlerini doldurun (`.env` asla commit edilmez).
+3. Veritabanı migration sırası (`0001_create_users` → `0002_create_courses_enrollments` → `0003_create_rag_tables` → `0004_add_chunk_embeddings`):
+   ```bash
+   cd backend && alembic upgrade head
+   ```
+4. Yerel embedding modeli (`models/` `.gitignore` içindedir, revizyon `614241f622f53c4eeff9890bdc4f31cfecc418b3`):
+   - `onnx/model.onnx` ve `onnx/tokenizer.json` dosyalarını resmi `intfloat/multilingual-e5-small` Hugging Face deposundan `models/multilingual-e5-small/` dizinine indirip SHA-256 doğrulaması yapın.
+5. Yerel Ollama ve `qwen3:4b`:
+   ```bash
+   OLLAMA_HOST=127.0.0.1:11434 ollama serve
+   OLLAMA_HOST=127.0.0.1:11434 ollama pull qwen3:4b
+   ```
+6. Backend ve OpenAPI dokümantasyonu:
+   ```bash
+   cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
+   # http://127.0.0.1:8000/docs
+   ```
 
 ## GitHub Proje Yönetimi
 
