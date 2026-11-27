@@ -9,13 +9,17 @@ from app.api.assistant import (
     router as assistant_router,
 )
 from app.api.auth import router as auth_router
+from app.api.exams import router as exams_router
 from app.api.health import router as health_router
 from app.api.learning import router as learning_router
+from app.api.mastery import router as mastery_router
 from app.api.materials import (
     compat_router as materials_compat_router,
     router as materials_router,
 )
 from app.api.middleware import UploadBodyLimitMiddleware
+from app.api.outcomes import router as outcomes_router
+from app.api.questions import router as questions_router
 from app.api.users import router as users_router
 from app.core.config import get_cors_origins_for_app
 
@@ -67,6 +71,26 @@ app.include_router(
 
 app.include_router(
     assistant_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    questions_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    exams_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    outcomes_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    mastery_router,
     prefix="/api/v1",
 )
 
