@@ -51,7 +51,7 @@ def test_mutual_admin_deactivation_concurrency_20_iterations(
 ) -> None:
     for iteration in range(ITERATIONS):
         with migrated_pg_engine.begin() as conn:
-            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
 
         setup = pg_session_factory()
         try:
@@ -116,7 +116,7 @@ def test_mixed_demote_and_deactivate_concurrency_20_iterations(
 ) -> None:
     for iteration in range(ITERATIONS):
         with migrated_pg_engine.begin() as conn:
-            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
 
         setup = pg_session_factory()
         try:
@@ -200,7 +200,7 @@ def test_sole_admin_deactivate_racing_with_student_promotion_20_iterations(
 ) -> None:
     for iteration in range(ITERATIONS):
         with migrated_pg_engine.begin() as conn:
-            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+            conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
 
         setup = pg_session_factory()
         try:

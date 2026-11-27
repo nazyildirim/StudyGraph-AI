@@ -13,3 +13,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "postgres: integration tests requiring a verified local PostgreSQL test database",
     )
+    config.addinivalue_line(
+        "markers",
+        "real_model: smoke tests requiring the local downloaded multilingual-e5-small ONNX model",
+    )

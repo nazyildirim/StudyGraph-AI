@@ -69,4 +69,7 @@ def test_alembic_script_directory_loads_without_db() -> None:
 
     script_dir = ScriptDirectory.from_config(cfg)
     heads = script_dir.get_heads()
-    assert heads == ["0001_create_users"]
+    # Later migrations (courses, RAG) extend the chain; the users migration must
+    # stay the base revision and the history must remain linear.
+    assert len(heads) == 1
+    assert script_dir.get_revision("0001_create_users").down_revision is None
