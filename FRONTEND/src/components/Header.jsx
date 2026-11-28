@@ -1,4 +1,6 @@
 // Üst menü: kullanıcı rolüne göre farklı bağlantılar gösterir
+import { features } from '../api/api.js'
+
 export default function Header({ user, page, go, onLogout }) {
   const studentLinks = [
     { id: 'courses', label: 'Dersler' },
@@ -30,6 +32,11 @@ export default function Header({ user, page, go, onLogout }) {
         ))}
       </nav>
       <div className="user">
+        {features.mode === 'demo' && (
+          <span className="tag mode-demo" title="Örnek veriyle çalışıyor. Canlı backend için: npm run dev:canli">
+            Demo
+          </span>
+        )}
         <span className="muted">{user.name}</span>
         <button type="button" className="btn ghost small" onClick={onLogout}>
           Çıkış

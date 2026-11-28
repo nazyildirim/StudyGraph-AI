@@ -3,13 +3,15 @@
 // 2) Sınav
 // 3) Sonuç: puan değişimi ve karar
 import { useEffect, useState } from 'react'
-import { getRetest, getRetestOptions, submitRetest } from '../api/api.js'
+import { features, getRetest, getRetestOptions, submitRetest } from '../api/api.js'
 import { difficultyLabels, questionCountOptions } from '../api/learningLogic.js'
 import Quiz from '../components/Quiz.jsx'
 
 const difficultyHints = {
   mixed: 'Kolay, orta ve zor sorular dengeli karışır. Önerilen seçenek.',
-  easy: 'Konuya ısınmak için. Sadece kolay sorularla konu "Yeterli" sayılmaz.',
+  easy: features.easyCap
+    ? 'Konuya ısınmak için. Sadece kolay sorularla konu "Yeterli" sayılmaz.'
+    : 'Konuya ısınmak için.',
   medium: 'Konuyu ne kadar anladığını ölçer.',
   hard: 'Kendini zorlamak için. Dikkatli düşünmen gereken sorular.',
 }
@@ -21,6 +23,7 @@ export default function RetestPage({ course, outcome, go }) {
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (outcome) getRetestOptions(course.id, outcome.id).then(setOptions)
@@ -39,15 +42,26 @@ export default function RetestPage({ course, outcome, go }) {
 
   async function start() {
     setLoading(true)
-    setQuestions(await getRetest(course.id, outcome.id, settings))
-    setLoading(false)
+    setError('')
+    try {
+      setQuestions(await getRetest(course.id, outcome.id, settings))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleSubmit(answers) {
     setSubmitting(true)
-    const res = await submitRetest(course.id, outcome.id, answers, settings.difficulty)
-    setSubmitting(false)
-    setResult(res)
+    setError('')
+    try {
+      setResult(await submitRetest(course.id, outcome.id, answers, settings.difficulty, questions.attemptId))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function restart() {
@@ -103,6 +117,19 @@ export default function RetestPage({ course, outcome, go }) {
         <p className="muted">
           {difficultyLabels[settings.difficulty]} zorlukta {questions.length} soru. Sonuç haritana yansıyacak.
         </p>
+        {questions.resumed && (
+          <p className="note">
+            {questions.differentSettings
+              ? 'Daha önce başlattığın bir tekrar sınavı yarım kalmış. Yenisini açmadan önce onu bitirmen gerekiyor; kaldığın yerden devam ediyorsun.'
+              : 'Yarım kalan tekrar sınavına kaldığın yerden devam ediyorsun.'}
+          </p>
+        )}
+        {questions.unseen != null && questions.reused > 0 && (
+          <p className="muted small">
+            {questions.unseen} soru ilk kez karşına çıkıyor, {questions.reused} soru daha önce gördüğün sorulardan.
+          </p>
+        )}
+        {error && <p className="error">{error}</p>}
         <Quiz questions={questions} onSubmit={handleSubmit} submitting={submitting} />
       </div>
     )
@@ -111,7 +138,8 @@ export default function RetestPage({ course, outcome, go }) {
   // ---------- 1) Ayarlar ----------
   if (!options) return <p className="muted">Hazırlanıyor…</p>
 
-  const available = options[settings.difficulty]
+  const known = options[settings.difficulty] !== null // canlı modda havuz büyüklüğü bilinmez
+  const available = known ? options[settings.difficulty] : settings.count
   const willGet = Math.min(settings.count, available)
 
   return (
@@ -131,7 +159,7 @@ export default function RetestPage({ course, outcome, go }) {
               onClick={() => setSettings({ ...settings, difficulty: key })}
             >
               {label}
-              <span className="count">havuzda {options[key]}</span>
+              {options[key] !== null && <span className="count">havuzda {options[key]}</span>}
             </button>
           ))}
         </div>
@@ -150,12 +178,13 @@ export default function RetestPage({ course, outcome, go }) {
             </button>
           ))}
         </div>
-        {available < settings.count && (
+        {known && available < settings.count && (
           <p className="note">
             Bu zorlukta {available} soru var; sınav {willGet} soruyla yapılacak.
           </p>
         )}
 
+        {error && <p className="error">{error}</p>}
         <div className="summary-line">
           <span>
             <b>{willGet}</b> soru · {difficultyLabels[settings.difficulty]} · yaklaşık {Math.max(1, Math.round(willGet * 0.75))} dk

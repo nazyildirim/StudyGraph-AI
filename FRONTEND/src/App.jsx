@@ -3,9 +3,9 @@
 // Hangi ekranın gösterileceğine burası karar verir.
 // Akış: Giriş → Dersler → Başlangıç sınavı → Harita → Çalış → Tekrar sınavı → Harita
 // ------------------------------------------------------------
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
-import { logout } from './api/api.js'
+import { logout, getCourses } from './api/api.js'
 import Header from './components/Header.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import CoursesPage from './pages/CoursesPage.jsx'
@@ -23,6 +23,24 @@ export default function App() {
   const [page, setPage] = useState('login') // gösterilen ekran
   const [course, setCourse] = useState(DEFAULT_COURSE) // seçili ders
   const [outcome, setOutcome] = useState(null) // çalışılan konu
+  const [notice, setNotice] = useState('') // giriş ekranında gösterilecek mesaj
+
+  // Canlı modda ilk dersi varsayılan yap
+  useEffect(() => {
+    getCourses().then((cs) => cs[0] && setCourse((c) => (cs.some((x) => x.id === c.id) ? c : cs[0])))
+  }, [])
+
+  // Canlı modda token süresi dolarsa (401) girişe dön
+  useEffect(() => {
+    const onExpired = () => {
+      setUser(null)
+      setOutcome(null)
+      setPage('login')
+      setNotice('Oturumun sona erdi, lütfen tekrar giriş yap.')
+    }
+    window.addEventListener('studygraph:unauthorized', onExpired)
+    return () => window.removeEventListener('studygraph:unauthorized', onExpired)
+  }, [])
 
   function go(next) {
     setPage(next)
@@ -32,7 +50,9 @@ export default function App() {
   if (!user) {
     return (
       <LoginPage
+        notice={notice}
         onLogin={(u) => {
+          setNotice('')
           setUser(u)
           go({ instructor: 'instructor', admin: 'admin' }[u.role] || 'courses')
         }}
@@ -53,7 +73,7 @@ export default function App() {
       )
       break
     case 'exam':
-      content = <ExamPage course={course} onFinished={() => go('map')} />
+      content = <ExamPage course={course} onFinished={() => go('map')} go={go} />
       break
     case 'map':
       content = (

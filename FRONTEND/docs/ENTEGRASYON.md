@@ -1,110 +1,113 @@
 # StudyGraph AI – Arayüz ve Backend Entegrasyonu
 
-**Durum (24.11.2026):** Öğrenme analizi entegrasyonu tamamlandı ve test edildi.
-Diğer servisler backend'de henüz olmadığı için örnek veriyle çalışıyor.
+**Durum (28.11.2026):** Arayüz, ekibin backend'indeki tüm mevcut servislere bağlandı:
+giriş/rol (#22), soru bankası ve sınavlar (#24), yapay zekâ asistanı ve ders notları (#23),
+öğrenme analizi (#19). Backend'de henüz olmayan servisler için ekranlar bunu açıkça belirtir.
 
-## 1. Neler bağlı?
+Arayüz iki modda çalışır:
 
-| Özellik | Kaynak | Durum |
+| Mod | Komut | Ne zaman |
 |---|---|---|
-| Kazanım puanları, öğrenme sırası, öneriler, engelli konular | Ranya'nın backend'i: `POST /api/v1/learning-analyses` | **Bağlı** |
-| Backend çalışıyor mu kontrolü | `GET /api/v1/health` | **Bağlı** |
-| Giriş, dersler, sınav soruları, soru bankası, notlar, asistan, raporlar, kullanıcılar | Örnek veri (`src/api/mockData.js`) | Backend servisi yok, bekleniyor |
+| **Canlı** | `npm run dev:canli` | Backend çalışırken; tüm veriler veritabanından ve yapay zekâdan gelir |
+| **Demo** | `npm run dev` | Backend yokken (sunum yedeği); örnek veriyle çalışır, sağ üstte "Demo" yazar |
 
-Harita ekranının sağ üstünde analizin nereden geldiği yazar:
-**"Analiz: backend"** (yeşil) ya da **"Analiz: yerel (backend kapalı)"**.
-Backend kapalıysa uygulama bozulmaz; aynı kurallarla tarayıcıda hesaplar.
+Mod seçimi `src/api/api.js` içinde yapılır: `liveApi.js` (canlı) ya da `mockApi.js` (demo).
+Ekranlar iki modda da aynı kodu kullanır.
 
-## 2. Nasıl çalıştırılır?
+---
 
-İki terminal gerekir.
+## 1. Canlı modda bağlanan servisler
 
-**Terminal 1 – Backend** (Ranya'nın `feature/backend-foundation` dalı):
+| Ekran | Uç nokta | Not |
+|---|---|---|
+| Giriş | `POST /api/v1/auth/login`, `GET /api/v1/users/me` | Rol sunucudan gelir; token sadece bellekte tutulur |
+| Kayıt | `POST /api/v1/auth/register` | Yeni kullanıcılar öğrenci olarak başlar |
+| Başlangıç sınavı | `POST /courses/{id}/exams/initial`, `POST .../attempts/{aid}/submit` | Yarım kalan sınav kaldığı yerden açılır; doğru cevap tarayıcıya hiç gelmez |
+| Tekrar sınavı | `POST /courses/{id}/exams/retest` (`learning_outcome_id`, `question_count`, `difficulty`) | Farklı ayarlarla yarım kalan sınav varsa geçmişten bulunup açılır |
+| Öğrenme haritası | `GET /courses/{id}/outcomes`, `/mastery`, `/recommendations`, `/exams/history`, `.../attempts/{aid}/result` | Ölçülmemiş kazanım "Ölçülmedi" olarak çizilir |
+| Asistan | `POST /courses/{id}/assistant` (`question`, `mode`, `outcome_id`) | Konu anlatımı / Kod örneği / Alıştırma; kaynaklar `[S1]` biçiminde; kaynaksız ve yedek mod uyarıları; 90 sn zaman aşımı |
+| Ders notları | `GET/POST /courses/{id}/materials`, `POST .../materials/upload`, `DELETE .../materials/{mid}` | PDF/TXT yükleme (FormData), işlenme durumu ve hata mesajı gösterilir |
+| Soru bankası | `GET/POST/PUT/DELETE /courses/{id}/questions` | 4 şık, 1 doğru; düzenlenen kullanılmış soru yeni sürüm olur; silinen kullanılmış soru arşivlenir (ekranda yazar) |
+| Yönetici | `GET /admin/users`, `PATCH .../role`, `PATCH .../status` | Son aktif yöneticinin yetkisi alınamaz (409 → Türkçe mesaj) |
+
+Hata yönetimi: `401` → "Oturumun sona erdi" mesajıyla giriş ekranına dönüş; `403/404/409/413/415/422/429/503`
+için Türkçe mesaj. Sınav `409` mesajları backend'deki gerçek metinlerle eşleştirildi.
+
+## 2. Backend'de henüz olmayanlar (ekranda belirtiliyor)
+
+| Eksik servis | Arayüzde şu an |
+|---|---|
+| Ders listeleme / oluşturma | Dersler `src/config.js` dosyasından okunur; "Dersler" sekmesinde not var |
+| Kazanım ve ön koşul ekleme | Kazanımlar sadece okunur; "Kazanımlar" sekmesinde not var |
+| Öğrenciyi derse kaydetme | Veritabanında yapılmalı (backend ekibi) |
+| Sınıf ve bireysel ilerleme raporu | "Genel Bakış"ta not var |
+| Başarı eşiğini değiştirme | Eşik backend ayarı (%70), sadece gösteriliyor |
+| Yöneticinin kullanıcı eklemesi | Kullanıcılar kendileri kayıt olur, yönetici rol verir |
+| Öğrencinin soru havuzu büyüklüğünü görmesi | Tekrar sınavı ayarında "havuzda N" yazmaz |
+
+## 3. Çalıştırma (canlı)
+
+**Backend** (`backend/README_backend.md`):
 ```
 cd backend
 pip install -r requirements.txt
-uvicorn app.main:app --port 8000
+copy .env.example .env        (DATABASE_URL ve JWT_SECRET_KEY doldurulur)
+alembic upgrade head
+python -m app.cli.create_admin
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+Asistan için ayrıca Ollama ve `qwen3:4b` modeli gerekir; yoksa asistan "yedek mod" uyarısıyla
+ders notlarından doğrudan cevap verir.
 
-**Terminal 2 – Arayüz:**
+**Veritabanında olması gerekenler:** ders (`courses`), kazanımlar ve ön koşulları, dersi veren
+akademisyen, derse kayıtlı öğrenciler. Bunların ekranı backend'de henüz olmadığı için demo öncesi
+backend ekibinin eklemesi gerekir.
+
+**Arayüz:**
 ```
 cd FRONTEND
 npm install
-npm run dev
+npm run dev:canli
 ```
+`src/config.js` içindeki ders kimliği (`id`) veritabanındakiyle aynı olmalı.
 
-Tarayıcıda `http://localhost:5173` açılır. Vite, `/api` ile başlayan istekleri
-otomatik olarak `http://localhost:8000` adresine yönlendirir (`vite.config.js`),
-bu yüzden backend'de CORS ayarı gerekmez.
+## 4. Test
 
-**Entegrasyon testi** (backend açıkken): `npm run test:entegrasyon`
+Ekibin backend'i PostgreSQL ve Ollama gerektirdiği için bu ortamda çalıştırılamadı. Bunun yerine
+sözleşme belgelerine (AUTHENTICATION.md, ASSESSMENT_API_CONTRACT.md, RAG_API_CONTRACT.md) alan
+alan uyan bir test sunucusu yazıldı; 409 hata metinleri backend kodundan birebir kopyalandı,
+başarı haritası ve öneriler **Ranya'nın gerçek `LearningAnalysisService` koduyla** hesaplandı.
 
-## 3. Veri akışı
+Tarayıcıda uçtan uca 30 kontrol:
 
-```mermaid
-sequenceDiagram
-  actor Ö as Öğrenci
-  participant UI as Arayüz
-  participant SS as Sınav katmanı (şimdilik api.js)
-  participant BE as Öğrenme analizi (Ranya)
-  Ö->>UI: Cevapları gönderir
-  UI->>SS: submitInitialExam / submitRetest
-  SS->>SS: Doğru/yanlış hesaplanır (doğru cevaplar tarayıcıya gönderilmez)
-  UI->>BE: POST /api/v1/learning-analyses
-  Note over UI,BE: course_id, outcomes, prerequisite_edges,<br/>question_results (question_id, outcome_id, is_correct),<br/>mastery_threshold
-  BE-->>UI: learning_order, scores, recommendations
-  UI-->>Ö: Renkli harita, önerilen konu, engelli konular
-```
-
-Eşleştirme:
-
-| Arayüz | Backend |
+| Akış | Sonuç |
 |---|---|
-| kazanım `name` | `title` |
-| `prerequisites: ['k1']` (k3 için) | `{ outcome_id: 'k3', prerequisite_id: 'k1' }` |
-| akademisyenin "Yeterli" eşiği | `mastery_threshold` |
-| `completed` | Yeşil, tamamlandı |
-| `review` / `study` | Önerilebilir konu (ön koşulları tamam) |
-| `blocked` | Ön koşulu eksik, önerilmez |
+| Canlı modda rol seçimi ve "Demo" etiketi yok; ad profil servisinden geliyor | Geçti |
+| Kayıt → giriş → ders → 15 soruluk başlangıç sınavı (backend seçti) | Geçti |
+| Harita: kaynak backend, öneri İç İçe Döngüler, engelli konular, geçmiş | Geçti |
+| Başlangıç sınavını ikinci kez açma → "zaten tamamladın" | Geçti |
+| Asistan: Kod örneği modu, `[S1] [S2]` kaynakları; kaynaksız soru uyarısı | Geçti |
+| Tekrar sınavı Zor + 3 soru → 3/3 → %0 → %100, yeni öneri Zaman Karmaşıklığı | Geçti |
+| Farklı ayarla yarım kalan tekrar sınavı bulunup açıldı ve teslim edildi | Geçti |
+| Yönetici: kullanıcı listesi, son yönetici koruması, öğrenciyi pasif yapma | Geçti |
+| Pasif yapılan öğrencinin bir sonraki isteği → "Oturumun sona erdi" | Geçti |
+| Akademisyen: rapor yok notu (öğrenciye özel servislere istek atılmıyor) | Geçti |
+| Kazanımlar salt okunur, soru bankasında sınav türü seçimi yok | Geçti |
+| Soru ekleme; kullanılmış soruyu düzenleme → sürüm; silme → arşiv mesajı | Geçti |
+| TXT yükleme → "İşlendi"; bozuk PDF → "İşlenemedi" + hata; not silme | Geçti |
 
-Her kazanım için **en son ölçümün** soru sonuçları gönderilir (başlangıç sınavı
-ya da o konunun son tekrar sınavı).
+Demo modu ayrıca yeniden test edildi; önceki tüm akışlar aynen çalışıyor.
 
-## 4. Test sonuçları
+**Sınır:** Gerçek backend + PostgreSQL + Ollama ile canlı tarayıcı denemesi ekipçe yapılmalı
+(bkz. bölüm 3). Sözleşmede olmayan bir davranış farkı çıkarsa düzeltme `liveApi.js` içinde yapılır.
 
-Ranya'nın `LearningAnalysisService` kodu, FastAPI rotasıyla aynı JSON giriş/çıkışını
-kullanan bir test sunucusunda çalıştırıldı. (Test ortamında FastAPI kurulamadığı için
-Pydantic doğrulama katmanı bu testte devre dışıydı; analiz mantığı Ranya'nın gerçek kodudur.)
+## 5. Ekip kararları
 
-| Kontrol | Sonuç |
-|---|---|
-| Health endpoint | Geçti |
-| İstek sözleşme formatında (15 sonuç, 6 ön koşul ilişkisi) | Geçti |
-| Harita backend analiziyle geliyor | Geçti |
-| Puanlar backend hesabı (k1 %100, k3 %0) | Geçti |
-| Durumlar: İç İçe Döngüler `review`, Bubble Sort `blocked` | Geçti |
-| Öneri: İç İçe Döngüler | Geçti |
-| Kolay sınav sınırı backend sonucuna uygulanıyor | Geçti |
-| Sınırlı konunun bağımlısı `blocked` kalıyor | Geçti |
-| Orta sınav sonrası konu `completed`, öneri Zaman Karmaşıklığı | Geçti |
-| Bubble Sort engelli kalıyor | Geçti |
-| Backend kapalıyken yerel hesap aynı öneriyi veriyor | Geçti |
-
-Tarayıcı testi: harita "Analiz: backend" gösterdi; sınav → harita → tekrar sınavı
-akışında tüm analizler backend'den geldi.
-
-**Testin bulduğu hata:** İlk sürümde soru sonuçlarında `outcome_id` alanı eksikti;
-backend isteği reddetti. Düzeltildi.
-
-## 5. Ekipçe karar verilmesi gerekenler
-
-1. **Zorluk bilgisi:** Backend soruların zorluğunu bilmiyor. "Sadece kolay sorularla
-   konu yeterli sayılmaz" kuralı şimdilik arayüzde uygulanıyor. Kalıcı çözüm için
-   `question_results` içine `difficulty` alanı eklenip kuralın backend'e taşınması önerilir.
-2. **Doğru/yanlış hesabı:** Sözleşmeye göre bu iş sınav sisteminin. Şu an `api.js`
-   içindeki sınav katmanında yapılıyor (doğru cevaplar ekrana gönderilmiyor). Sınav
-   servisi yazılınca bu katman ona bağlanacak ve `is_correct` sunucuda üretilecek.
-3. **Kalıcı kayıt:** Analiz endpoint'i veritabanına yazmıyor; ilerleme geçmişi şimdilik
-   tarayıcıda tutuluyor.
-4. **Kimlikler:** Ders kimliği backend'e metin (`"1"`) olarak gidiyor; veritabanı
-   tasarımıyla uyumlu hâle getirilmeli.
+1. **Kolay sınav tavanı:** Demo modunda "sadece kolay sorularla konu yeterli sayılmaz" kuralı var.
+   Canlı modda puanlama tamamen backend'de yapıldığı için bu kural **uygulanmıyor**. Kural istenirse
+   backend'in puanlama motoruna eklenmeli (Ayşenaz'ın ASSESSMENT_API_CONTRACT.md notu).
+2. **Ders/kazanım yönetimi ve sınıf raporu servisleri:** Arayüz ekranları hazır (demo modunda
+   çalışıyor); backend'e eklenirse `liveApi.js` içindeki ilgili fonksiyonlar bağlanır.
+3. **Klasör adı:** main dalında `frontend/.gitkeep` var, arayüz `FRONTEND/` klasöründe. Windows'ta
+   ikisi aynı klasör sayılır ama Linux/Mac'te iki ayrı klasör olur; birleştirmeden önce tek ada
+   karar verilmeli.

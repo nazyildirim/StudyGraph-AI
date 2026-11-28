@@ -1,6 +1,6 @@
 // GENEL BAKIŞ: sınıf raporu ve başarı eşikleri
 import { useEffect, useState } from 'react'
-import { getClassReport, getLearningMap, resetDemo, updateThresholds } from '../../api/api.js'
+import { features, getClassReport, getLearningMap, getOutcomes, resetDemo, updateThresholds } from '../../api/api.js'
 import { levelOf } from '../../api/learningLogic.js'
 
 export default function ClassOverview({ course, go }) {
@@ -10,10 +10,19 @@ export default function ClassOverview({ course, go }) {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    getLearningMap(course.id).then((m) => {
-      setMap(m)
-      setThresholds(m.thresholds)
-    })
+    // Canlı modda öğrenme haritası öğrenciye özel; akademisyen sadece kazanımları okur
+    const load = features.classReport
+      ? getLearningMap(course.id)
+      : getOutcomes(course.id).then((outcomes) => ({ outcomes, thresholds: { sufficient: 70, developing: 40 } }))
+    load
+      .then((m) => {
+        setMap(m)
+        setThresholds(m.thresholds)
+      })
+      .catch(() => {
+        setMap({ outcomes: [] })
+        setThresholds({ sufficient: 70, developing: 40 })
+      })
     getClassReport(course.id).then(setReport)
   }, [course.id])
 
@@ -29,6 +38,51 @@ export default function ClassOverview({ course, go }) {
     await updateThresholds(course.id, thresholds)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  // Canlı mod: backend'de rapor servisi yok
+  if (report.unavailable) {
+    return (
+      <div>
+        <div className="card highlight">
+          <h3>Sınıf raporu henüz yok</h3>
+          <p className="muted">
+            Backend'de sınıf ve bireysel ilerleme raporu servisi henüz yazılmadı. Servis eklenince bu ekran gerçek
+            öğrenci sonuçlarını gösterecek. Şimdilik Soru Bankası ve Ders Notları sekmelerini kullanabilirsin.
+          </p>
+          <div className="row">
+            <button type="button" className="btn primary" onClick={() => go('questions')}>
+              Soru bankası
+            </button>
+            <button type="button" className="btn" onClick={() => go('materials')}>
+              Ders notları
+            </button>
+          </div>
+        </div>
+        <div className="card">
+          <h3>Başarı eşiği</h3>
+          <p>
+            Bir kazanım <b>%{thresholds.sufficient}</b> ve üzeri puanda tamamlanmış sayılır.
+          </p>
+          <p className="muted small">Bu değer backend ayarıdır (EXAM_DEFAULT_MASTERY_THRESHOLD); arayüzden değiştirilemez.</p>
+        </div>
+        <div className="card">
+          <h3>Kazanımlar ({map.outcomes.length})</h3>
+          <ul className="list">
+            {map.outcomes.map((o) => (
+              <li key={o.id}>
+                <div>
+                  {o.code && <span className="tag">{o.code}</span>} <b>{o.name}</b>
+                  <div className="muted small">
+                    Ön koşul: {o.prerequisites.length ? o.prerequisites.map((p) => byId[p]?.name || p).join(', ') : 'yok'}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )
   }
 
   return (

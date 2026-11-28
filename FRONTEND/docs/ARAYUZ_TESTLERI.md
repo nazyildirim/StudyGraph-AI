@@ -52,6 +52,11 @@ Konsolda hata çıkmadı.
 | E4 | Ölçüm geçmişi | Satırda zorluk ve soru sayısı yazar | Geçti |
 | E5 | Akademisyen soru bankası | Her soruda zorluk etiketi, yeni soruda zorluk seçimi | Geçti |
 
+## 2b. Canlı mod (backend sözleşmesi) testleri
+
+Ekibin API sözleşmelerine birebir uyan test sunucusuyla, tarayıcıda 30 kontrol çalıştırıldı;
+hepsi geçti (28.11.2026). Liste ve yöntem: `docs/ENTEGRASYON.md`, bölüm 4.
+
 ## 3. Kullanılabilirlik testi (gerçek kullanıcılarla, YAPILACAK)
 
 Henüz gerçek kullanıcılarla yapılmadı. Sunumdan önce 2–3 arkadaşla aşağıdaki görevler denenip tablo doldurulmalı.
@@ -69,5 +74,5 @@ Her görev için: başarılı mı (Evet/Hayır), yaklaşık süre, kullanıcın�
 
 ## 4. Bilinen sınırlar
 
-- Öğrenme analizi backend'e bağlı ve test edildi; diğer servisler backend'de henüz yok.
+- Canlı mod sözleşmeye uygun test sunucusuyla test edildi; gerçek backend ile canlı deneme ekipçe yapılmalı.
 - Asistan cevapları demo modunda ders notu parçalarıdır; gerçek yapay zekâ cevabı RAG servisi bağlanınca gelecek.

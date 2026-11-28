@@ -1,6 +1,6 @@
 // DERS YÖNETİMİ: yeni ders ekleme ve ders listesi
 import { useState } from 'react'
-import { createCourse, deleteCourse } from '../../api/api.js'
+import { createCourse, deleteCourse, features } from '../../api/api.js'
 
 const empty = { code: '', name: '', description: '' }
 
@@ -29,6 +29,7 @@ export default function CourseManager({ courses, onChanged, onOpen }) {
 
   return (
     <div className="two-col">
+      {features.manageCourses ? (
       <form className="card" onSubmit={submit}>
         <h3>Yeni ders ekle</h3>
         <label>
@@ -55,6 +56,15 @@ export default function CourseManager({ courses, onChanged, onOpen }) {
           Ders, en az bir kazanım ve bir başlangıç sınavı sorusu eklenince öğrencilere açılır.
         </p>
       </form>
+      ) : (
+        <div className="card">
+          <h3>Dersler</h3>
+          <p className="muted">
+            Backend'de ders oluşturma servisi henüz yok. Dersler veritabanında tanımlanıyor; arayüzde gösterilecek
+            dersler <code>src/config.js</code> dosyasından okunur.
+          </p>
+        </div>
+      )}
 
       <div className="card">
         <h3>Derslerim</h3>
@@ -65,7 +75,7 @@ export default function CourseManager({ courses, onChanged, onOpen }) {
               <div>
                 <span className="tag">{c.code}</span> <b>{c.name}</b>
                 <div className="muted small">
-                  {c.outcomeCount} kazanım · {c.questionCount} soru · {c.materialCount} not ·{' '}
+                  {c.outcomeCount !== null && `${c.outcomeCount} kazanım · ${c.questionCount} soru · ${c.materialCount} not · `}
                   <span className={c.active ? 'success' : 'warn'}>{c.active ? 'Öğrencilere açık' : 'Hazırlanıyor'}</span>
                 </div>
               </div>
@@ -73,9 +83,11 @@ export default function CourseManager({ courses, onChanged, onOpen }) {
                 <button type="button" className="btn small" onClick={() => onOpen(c.id, 'outcomes')}>
                   Düzenle
                 </button>
-                <button type="button" className="btn small ghost danger" onClick={() => remove(c)}>
-                  Sil
-                </button>
+                {features.manageCourses && (
+                  <button type="button" className="btn small ghost danger" onClick={() => remove(c)}>
+                    Sil
+                  </button>
+                )}
               </div>
             </li>
           ))}

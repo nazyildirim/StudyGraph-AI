@@ -8,11 +8,25 @@ export default function MapPage({ course, go, onStudy }) {
   const [map, setMap] = useState(null)
   const [rec, setRec] = useState(undefined)
   const [selected, setSelected] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    getLearningMap(course.id).then(setMap)
-    getRecommendation(course.id).then(setRec)
+    setError('')
+    Promise.all([getLearningMap(course.id), getRecommendation(course.id)])
+      .then(([m, r]) => {
+        setMap(m)
+        setRec(r)
+      })
+      .catch((err) => setError(err.message))
   }, [course.id])
+
+  if (error) {
+    return (
+      <div className="card empty">
+        <p>{error}</p>
+      </div>
+    )
+  }
 
   if (!map || rec === undefined) return <p className="muted">Harita yükleniyor…</p>
 
@@ -52,7 +66,7 @@ export default function MapPage({ course, go, onStudy }) {
             <span className="tag accent">Sıradaki önerilen konu</span>
             <h2>{rec.outcome.name}</h2>
             <p className="muted">
-              Bu konunun tüm ön koşulları yeterli seviyede.
+              {rec.outcome.prerequisites.length ? 'Bu konunun tüm ön koşulları yeterli seviyede.' : 'Bu konunun ön koşulu yok.'}
               {rec.blockedTopics.length > 0 &&
                 ` Bu konuyu öğrenmeden ${rec.blockedTopics.join(', ')} ${rec.blockedTopics.length > 1 ? 'konularına' : 'konusuna'} geçmen önerilmez.`}
             </p>

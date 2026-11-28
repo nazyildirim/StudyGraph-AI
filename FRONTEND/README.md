@@ -16,9 +16,16 @@ Windows PowerShell'de `npm` komutu "running scripts is disabled" hatası verirse
 
 Testler: `npm.cmd test` (14 birim testi). Backend açıkken: `npm.cmd run test:entegrasyon`.
 
-## Backend entegrasyonu
+## Canlı mod ve demo modu
 
-Harita puanları, öğrenme sırası ve öneriler **Ranya'nın öğrenme analizi servisinden** (`POST /api/v1/learning-analyses`) gelir. Backend kapalıysa uygulama yerel hesapla çalışmaya devam eder; harita ekranında kaynak yazar. Ayrıntılar ve çalıştırma: `docs/ENTEGRASYON.md`.
+```bash
+npm run dev:canli   # ekibin backend'ine bağlanır (önce backend'i 8000 portunda başlat)
+npm run dev         # demo modu: örnek veriyle çalışır, sağ üstte "Demo" yazar
+```
+
+Canlı modda giriş, kayıt, sınavlar, öğrenme haritası, öneriler, asistan, ders notları, soru bankası
+ve kullanıcı yönetimi backend'den gelir. Backend'de henüz olmayan servisler (ders/kazanım ekleme,
+sınıf raporu) ekranda belirtilir. Ayrıntılar, çalıştırma adımları ve test sonuçları: `docs/ENTEGRASYON.md`.
 
 ## Uçtan uca akış (sunumdaki demo)
 
@@ -50,7 +57,9 @@ Yönetici girişi: kullanıcı ekleme, rol değiştirme, hesabı pasif/aktif yap
 | Dosya | Ne işe yarar |
 |---|---|
 | `src/App.jsx` | Hangi ekranın gösterileceğine karar verir (sayfa geçişleri) |
-| `src/api/api.js` | Ekranların veri istediği TEK yer. `USE_MOCK = true` ise örnek veriyle, `false` ise FastAPI backend ile çalışır |
+| `src/api/api.js` | Ekranların veri istediği TEK yer; demo ya da canlı katmanı seçer |
+| `src/api/liveApi.js` | Canlı mod: backend uç noktaları, veri dönüşümü, hata mesajları |
+| `src/api/mockApi.js` | Demo modu: örnek veriyle çalışan servisler |
 | `src/api/mockData.js` | Örnek ders, 5 kazanım, 15 başlangıç + 50 tekrar sorusu (zorluk etiketli), ders notu parçaları, sınıf raporu |
 | `src/api/learningLogic.js` | Demo için puanlama, seviye, döngü kontrolü ve öneri kuralları (gerçekte backend yapar) |
 | `src/components/LearningGraph.jsx` | Renkli ön koşul grafiği |
@@ -62,15 +71,15 @@ Yönetici girişi: kullanıcı ekleme, rol değiştirme, hesabı pasif/aktif yap
 | `src/components/instructor/*.jsx` | Akademisyen panelinin sekmeleri (ders, kazanım, soru, not yönetimi, genel bakış) |
 | `src/pages/*.jsx` | Ekranlar: Login, Courses, Exam, Map, Study, Retest, Instructor |
 
-## Diğer servisleri bağlama
+## Yeni servisleri bağlama
 
-Giriş, ders, sınav, soru bankası, not, asistan ve rapor servisleri backend'de yazıldıkça
-`src/api/api.js` içindeki ilgili fonksiyonlar gerçek yollarla eşleştirilir (`USE_MOCK`).
-Ekran dosyalarında değişiklik gerekmez.
+Backend'e ders/kazanım ekleme ya da sınıf raporu servisleri eklenince `src/api/liveApi.js`
+içindeki ilgili fonksiyon yazılır ve `features` içindeki bayrak açılır. Ekranlar hazır.
 
 ## Henüz yapılmayanlar (dürüst durum)
 
-- Backend'de şu an sadece öğrenme analizi servisi var; diğer servisler yazılınca bağlanacak (`docs/ENTEGRASYON.md`, bölüm 5).
+- Canlı mod sözleşmeye uygun test sunucusuyla test edildi; gerçek backend + PostgreSQL + Ollama ile canlı deneme ekipçe yapılmalı.
+- Backend'de olmayan servisler: ders/kazanım ekleme, derse kayıt, sınıf raporu, eşik ayarı (`docs/ENTEGRASYON.md`, bölüm 2).
 - Yapay zekâ asistanı demo modunda ders notlarından kelime eşleşmesiyle parça getiriyor; gerçek LLM cevabı backend RAG servisi bağlanınca gelecek.
 - Ders notu demo modunda metin olarak yapıştırılıyor; PDF yükleme ve otomatik parçalama backend RAG servisiyle gelecek.
 - Sınıf raporu örnek veri (sadece Algoritma Analizi dersi için).

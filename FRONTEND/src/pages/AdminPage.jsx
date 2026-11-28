@@ -1,6 +1,6 @@
 // PLATFORM YÖNETİCİSİ: kullanıcı ekleme, rol değiştirme, hesabı pasif/aktif yapma
 import { useEffect, useState } from 'react'
-import { addUser, getUsers, updateUser } from '../api/api.js'
+import { addUser, features, getUsers, updateUser } from '../api/api.js'
 
 const roleLabels = { student: 'Öğrenci', instructor: 'Akademisyen', admin: 'Yönetici' }
 
@@ -11,7 +11,12 @@ export default function AdminPage() {
   const [msg, setMsg] = useState(null)
 
   useEffect(() => {
-    getUsers().then(setUsers)
+    getUsers()
+      .then(setUsers)
+      .catch((err) => {
+        setUsers([])
+        setMsg({ ok: false, text: err.message })
+      })
   }, [])
 
   async function run(fn, okText) {
@@ -39,6 +44,7 @@ export default function AdminPage() {
       </p>
 
       <div className="two-col wide-right">
+        {features.addUser ? (
         <form
           className="card"
           onSubmit={async (e) => {
@@ -69,6 +75,15 @@ export default function AdminPage() {
             Kullanıcı ekle
           </button>
         </form>
+        ) : (
+          <div className="card">
+            <h3>Yeni kullanıcılar</h3>
+            <p className="muted">
+              Öğrenciler giriş ekranından kendileri kayıt olur ve öğrenci rolüyle başlar. Akademisyen ya da yönetici
+              yapmak için listeden rolünü değiştir.
+            </p>
+          </div>
+        )}
 
         <div className="card">
           <div className="panel-head">

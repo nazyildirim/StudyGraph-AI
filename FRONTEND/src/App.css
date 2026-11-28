@@ -209,3 +209,10 @@ input[type='range'] { accent-color: var(--primary); }
 @media (max-width: 720px) { .segmented.four { grid-template-columns: repeat(2, 1fr); } }
 .tag.source { font-weight: 500; }
 .tag.source.live { background: var(--green-bg); color: var(--green); }
+.linklike { background: none; border: none; padding: 0; color: var(--primary-ink); text-decoration: underline; cursor: pointer; font: inherit; }
+.tag.mode-demo { background: var(--yellow-bg); color: var(--yellow); }
+.segmented.modes { max-width: 460px; margin-bottom: 12px; }
+.bubble .note { margin-bottom: 8px; }
+.tag.status-processed { background: var(--green-bg); color: var(--green); }
+.tag.status-failed { background: var(--red-bg); color: var(--red); }
+.tag.status-pending, .tag.status-processing { background: var(--yellow-bg); color: var(--yellow); }

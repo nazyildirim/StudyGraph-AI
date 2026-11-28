@@ -5,7 +5,7 @@
 // Backend çalışmıyorsa test atlanır.
 // ------------------------------------------------------------
 import { test } from 'node:test'
-import * as api from './api.js'
+import * as api from './mockApi.js'
 import { initialExam, retestQuestions } from './mockData.js'
 
 const URL = process.env.ANALYSIS_URL || 'http://127.0.0.1:8000/api/v1'

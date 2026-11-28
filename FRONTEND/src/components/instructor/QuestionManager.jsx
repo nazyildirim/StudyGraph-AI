@@ -1,6 +1,6 @@
-// SORU BANKASI: kazanıma bağlı çoktan seçmeli soru ekleme/silme
+// SORU BANKASI: kazanıma bağlı çoktan seçmeli soru ekleme / düzenleme / silme
 import { useEffect, useState } from 'react'
-import { addQuestion, deleteQuestion, getOutcomes, getQuestions } from '../../api/api.js'
+import { addQuestion, deleteQuestion, features, getOutcomes, getQuestions, updateQuestion } from '../../api/api.js'
 import { difficultyLabels } from '../../api/learningLogic.js'
 
 const emptyForm = { outcomeId: '', kind: 'initial', difficulty: 'medium', text: '', options: ['', '', '', ''], answer: 0 }
@@ -12,28 +12,65 @@ export default function QuestionManager({ course, onChanged }) {
   const [form, setForm] = useState(emptyForm)
   const [filter, setFilter] = useState('')
   const [msg, setMsg] = useState(null)
+  const [editingId, setEditingId] = useState(null) // düzenlenen sorunun kimliği
 
   useEffect(() => {
-    getOutcomes(course.id).then(setOutcomes)
-    getQuestions(course.id).then(setQuestions)
+    getOutcomes(course.id)
+      .then(setOutcomes)
+      .catch((err) => {
+        setOutcomes([])
+        setMsg({ ok: false, text: err.message })
+      })
+    getQuestions(course.id)
+      .then(setQuestions)
+      .catch((err) => setMsg({ ok: false, text: err.message }))
   }, [course.id])
 
   async function submit(e) {
     e.preventDefault()
     setMsg(null)
     try {
-      setQuestions(await addQuestion(course.id, form))
-      setForm({ ...emptyForm, outcomeId: form.outcomeId, kind: form.kind, difficulty: form.difficulty })
-      setMsg({ ok: true, text: 'Soru eklendi.' })
+      if (editingId) {
+        const res = await updateQuestion(course.id, editingId, form)
+        setQuestions(res.questions)
+        setMsg({
+          ok: true,
+          text: res.versioned
+            ? 'Soru güncellendi. Daha önce bir sınavda kullanıldığı için eski hâli arşivlendi, yeni sürüm oluşturuldu.'
+            : 'Soru güncellendi.',
+        })
+        setEditingId(null)
+        setForm({ ...emptyForm, outcomeId: form.outcomeId, difficulty: form.difficulty })
+      } else {
+        setQuestions(await addQuestion(course.id, form))
+        setForm({ ...emptyForm, outcomeId: form.outcomeId, kind: form.kind, difficulty: form.difficulty })
+        setMsg({ ok: true, text: 'Soru eklendi.' })
+      }
       onChanged()
     } catch (err) {
       setMsg({ ok: false, text: err.message })
     }
   }
 
+  function startEdit(q) {
+    setEditingId(q.id)
+    setForm({ outcomeId: q.outcomeId, kind: q.kind, difficulty: q.difficulty || 'medium', text: q.text, options: [...q.options], answer: q.answer })
+    setMsg(null)
+    window.scrollTo(0, 0)
+  }
+
   async function remove(id) {
-    setQuestions(await deleteQuestion(course.id, id))
-    onChanged()
+    setMsg(null)
+    try {
+      const list = await deleteQuestion(course.id, id)
+      setQuestions(list)
+      if (list.lastDeleteArchived) {
+        setMsg({ ok: true, text: 'Soru daha önce bir sınavda kullanıldığı için silinmedi, arşivlendi (geçmiş sonuçlar korunur).' })
+      }
+      onChanged()
+    } catch (err) {
+      setMsg({ ok: false, text: err.message })
+    }
   }
 
   if (!outcomes) return <p className="muted">Yükleniyor…</p>
@@ -52,7 +89,7 @@ export default function QuestionManager({ course, onChanged }) {
   return (
     <div className="two-col wide-right">
       <form className="card" onSubmit={submit}>
-        <h3>Yeni soru ekle</h3>
+        <h3>{editingId ? 'Soruyu düzenle' : 'Yeni soru ekle'}</h3>
         <label>
           Ölçtüğü kazanım
           <select value={form.outcomeId} onChange={(e) => setForm({ ...form, outcomeId: e.target.value })}>
@@ -64,6 +101,7 @@ export default function QuestionManager({ course, onChanged }) {
             ))}
           </select>
         </label>
+        {features.questionKinds && (
         <label>
           Hangi sınavda kullanılacak
           <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
@@ -71,6 +109,7 @@ export default function QuestionManager({ course, onChanged }) {
             <option value="retest">Tekrar sınavı</option>
           </select>
         </label>
+        )}
         <label>
           Zorluk
           <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
@@ -105,9 +144,23 @@ export default function QuestionManager({ course, onChanged }) {
           </div>
         ))}
         {msg && <p className={msg.ok ? 'success' : 'error'}>{msg.text}</p>}
-        <button type="submit" className="btn primary">
-          Soruyu ekle
-        </button>
+        <div className="row tight">
+          <button type="submit" className="btn primary">
+            {editingId ? 'Değişiklikleri kaydet' : 'Soruyu ekle'}
+          </button>
+          {editingId && (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                setEditingId(null)
+                setForm({ ...emptyForm, outcomeId: form.outcomeId })
+              }}
+            >
+              Vazgeç
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="card">
@@ -117,26 +170,41 @@ export default function QuestionManager({ course, onChanged }) {
             <option value="">Tüm kazanımlar</option>
             {outcomes.map((o) => (
               <option key={o.id} value={o.id}>
-                {o.name} ({countFor(o.id, 'initial')} + {countFor(o.id, 'retest')})
+                {o.name} (
+                {features.questionKinds
+                  ? `${countFor(o.id, 'initial')} + ${countFor(o.id, 'retest')}`
+                  : questions.filter((q) => q.outcomeId === o.id).length}
+                )
               </option>
             ))}
           </select>
         </div>
-        <p className="muted small">Parantezde: başlangıç sınavı + tekrar sınavı soru sayısı.</p>
+        <p className="muted small">
+          {features.questionKinds
+            ? 'Parantezde: başlangıç sınavı + tekrar sınavı soru sayısı.'
+            : 'Parantezde: kazanımın soru sayısı. Başlangıç ve tekrar sınavları bu havuzdan seçilir.'}
+        </p>
         {shown.length === 0 && <p className="muted">Bu filtrede soru yok.</p>}
         <ul className="list">
           {shown.map((q) => (
             <li key={q.id}>
               <div>
-                <span className="tag">{kindLabel[q.kind]}</span>{' '}
+                {features.questionKinds && <span className="tag">{kindLabel[q.kind]}</span>}{' '}
                 <span className={`tag diff-${q.difficulty || 'medium'}`}>{difficultyLabels[q.difficulty || 'medium']}</span>{' '}
                 <span className="tag accent">{byId[q.outcomeId]?.name}</span>
                 <div>{q.text}</div>
                 <div className="muted small">Doğru: {'ABCD'[q.answer]}) {q.options[q.answer]}</div>
               </div>
-              <button type="button" className="btn small ghost danger" onClick={() => remove(q.id)}>
-                Sil
-              </button>
+              <div className="row tight">
+                {features.editQuestion && (
+                  <button type="button" className="btn small" onClick={() => startEdit(q)}>
+                    Düzenle
+                  </button>
+                )}
+                <button type="button" className="btn small ghost danger" onClick={() => remove(q.id)}>
+                  Sil
+                </button>
+              </div>
             </li>
           ))}
         </ul>

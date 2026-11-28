@@ -1,6 +1,6 @@
 // KAZANIM YÖNETİMİ: kazanım ekleme/silme ve ön koşul bağlantıları
 import { useEffect, useState } from 'react'
-import { addOutcome, addPrerequisite, deleteOutcome, getOutcomes } from '../../api/api.js'
+import { addOutcome, addPrerequisite, deleteOutcome, features, getOutcomes } from '../../api/api.js'
 import LearningGraph from '../LearningGraph.jsx'
 import { defaultThresholds } from '../../api/learningLogic.js'
 
@@ -12,7 +12,12 @@ export default function OutcomeManager({ course, onChanged }) {
   const [msg, setMsg] = useState(null)
 
   useEffect(() => {
-    getOutcomes(course.id).then(setOutcomes)
+    getOutcomes(course.id)
+      .then(setOutcomes)
+      .catch((err) => {
+        setOutcomes([])
+        setMsg({ ok: false, text: err.message })
+      })
   }, [course.id])
 
   async function run(fn, okText) {
@@ -33,6 +38,7 @@ export default function OutcomeManager({ course, onChanged }) {
   return (
     <div>
       <div className="two-col">
+        {features.manageOutcomes ? (
         <form
           className="card"
           onSubmit={(e) => {
@@ -69,6 +75,15 @@ export default function OutcomeManager({ course, onChanged }) {
             Kazanımı ekle
           </button>
         </form>
+        ) : (
+          <div className="card">
+            <h3>Kazanımlar backend'den okunuyor</h3>
+            <p className="muted">
+              Kazanımlar ve ön koşulları veritabanında tanımlı; bu ekran onları gösterir. Backend'de kazanım ekleme
+              servisi henüz olmadığı için ekleme ve silme kapalı.
+            </p>
+          </div>
+        )}
 
         <div className="card">
           <h3>Kazanımlar ({outcomes.length})</h3>
@@ -82,6 +97,7 @@ export default function OutcomeManager({ course, onChanged }) {
                     Ön koşul: {o.prerequisites.length ? o.prerequisites.map((p) => byId[p]?.name).join(', ') : 'yok'}
                   </div>
                 </div>
+                {features.manageOutcomes && (
                 <button
                   type="button"
                   className="btn small ghost danger"
@@ -93,6 +109,7 @@ export default function OutcomeManager({ course, onChanged }) {
                 >
                   Sil
                 </button>
+                )}
               </li>
             ))}
           </ul>
@@ -105,7 +122,7 @@ export default function OutcomeManager({ course, onChanged }) {
         <div className="card">
           <h3>Ön koşul grafiği</h3>
           <LearningGraph outcomes={outcomes} scores={{}} thresholds={defaultThresholds} />
-          {outcomes.length > 1 && (
+          {features.manageOutcomes && outcomes.length > 1 && (
             <form
               className="link-form"
               onSubmit={(e) => {

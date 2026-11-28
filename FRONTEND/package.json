@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "node --test src/api/learningLogic.test.js",
-    "test:entegrasyon": "node --test src/api/entegrasyon.test.js"
+    "test:entegrasyon": "node --test src/api/entegrasyon.test.js",
+    "dev:canli": "vite --mode canli"
   },
   "dependencies": {
     "react": "^19.3.1",

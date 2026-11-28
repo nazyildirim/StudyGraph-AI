@@ -1,19 +1,22 @@
 // ÇALIŞMA EKRANI: yapay zekâ asistanı (kaynak gösterimli) + tekrar sınavına geçiş
 import { useEffect, useRef, useState } from 'react'
-import { askAssistant, getLearningMap, getRecommendation } from '../api/api.js'
+import { askAssistant, features, getOutcomes, getRecommendation } from '../api/api.js'
 
 export default function StudyPage({ course, outcome, setOutcome, go }) {
   const [outcomes, setOutcomes] = useState([])
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState('topic_explanation') // canlı modda cevap türü
   const endRef = useRef(null)
 
   // Konu seçilmediyse önerilen konuyu kullan
   useEffect(() => {
-    getLearningMap(course.id).then((m) => setOutcomes(m.outcomes))
+    getOutcomes(course.id).then(setOutcomes).catch(() => setOutcomes([]))
     if (!outcome) {
-      getRecommendation(course.id).then((r) => r && setOutcome(r.outcome))
+      getRecommendation(course.id)
+        .then((r) => r && setOutcome(r.outcome))
+        .catch(() => {})
     }
   }, [course.id, outcome, setOutcome])
 
@@ -36,8 +39,11 @@ export default function StudyPage({ course, outcome, setOutcome, go }) {
     setMessages((m) => [...m, { from: 'user', text: question }])
     setLoading(true)
     try {
-      const res = await askAssistant(course.id, question, outcome?.id)
-      setMessages((m) => [...m, { from: 'ai', text: res.answer, sources: res.sources }])
+      const res = await askAssistant(course.id, question, outcome?.id, mode)
+      setMessages((m) => [
+        ...m,
+        { from: 'ai', text: res.answer, sources: res.sources, grounded: res.grounded, fallback: res.fallback },
+      ])
     } catch (err) {
       setMessages((m) => [...m, { from: 'ai', text: 'Bir hata oluştu: ' + err.message, sources: [] }])
     } finally {
@@ -75,6 +81,20 @@ export default function StudyPage({ course, outcome, setOutcome, go }) {
         </button>
       </div>
 
+      {features.assistantModes && (
+        <div className="segmented modes" role="group" aria-label="Cevap türü">
+          {[
+            ['topic_explanation', 'Konu anlatımı'],
+            ['code_example', 'Kod örneği'],
+            ['exercise', 'Alıştırma'],
+          ].map(([key, label]) => (
+            <button key={key} type="button" className={mode === key ? 'active' : ''} onClick={() => setMode(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="card chat">
         <div className="messages">
           {messages.length === 0 && (
@@ -92,13 +112,21 @@ export default function StudyPage({ course, outcome, setOutcome, go }) {
           {messages.map((m, i) => (
             <div key={i} className={`msg ${m.from}`}>
               <div className="bubble">
+                {m.grounded === false && (
+                  <div className="note small">Ders notlarında bu soruyla ilgili kaynak bulunamadı; cevap kaynaksız.</div>
+                )}
+                {m.fallback && (
+                  <div className="note small">Yapay zekâ modeli şu an kapalı; cevap ders notlarından doğrudan alındı.</div>
+                )}
                 {m.text}
                 {m.sources && m.sources.length > 0 && (
                   <div className="sources">
                     <b>Kaynaklar:</b>
                     {m.sources.map((s, j) => (
                       <span key={j} className="source">
-                        {s.title} · s. {s.page}
+                        {s.id ? `[${s.id}] ` : ''}
+                        {s.title}
+                        {s.page ? ` · s. ${s.page}` : ''}
                       </span>
                     ))}
                   </div>
@@ -108,7 +136,10 @@ export default function StudyPage({ course, outcome, setOutcome, go }) {
           ))}
           {loading && (
             <div className="msg ai">
-              <div className="bubble muted">Ders notları taranıyor…</div>
+              <div className="bubble muted">
+                Ders notları taranıyor…
+                {features.assistantModes && <div className="small">Yapay zekâ ilk soruda 30 saniye kadar sürebilir.</div>}
+              </div>
             </div>
           )}
           <div ref={endRef} />
